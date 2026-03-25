@@ -72,7 +72,8 @@ class CalendarAdapter(
             b.tvGraftInfo.text = "Прививка ${ev.graftingDt.toDisplayDate()}" +
                     if (ev.graftingDesc.isNotBlank()) " — ${ev.graftingDesc}" else ""
 
-            val color = BreedingCalendar.GRAFT_COLORS.getOrElse(ev.graftingTp) { 0xFF9E9E9E.toInt() }
+            //val color = BreedingCalendar.GRAFT_COLORS.getOrElse(ev.graftingTp) { 0xFF9E9E9E.toInt() }
+            val color = BreedingCalendar.getColorForGraftType(0)
             b.colorBg.setBackgroundColor(Color.argb(77, Color.red(color), Color.green(color), Color.blue(color)))
 
             if (ev.eventNote.isNotBlank()) {

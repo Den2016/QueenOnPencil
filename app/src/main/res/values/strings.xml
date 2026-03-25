@@ -18,4 +18,5 @@
     <string name="notification_time_label">Время уведомлений</string>
     <string name="note_title">Заметка</string>
     <string name="note_hint">Введите заметку…</string>
+    <string name="default_graft_type_prompt">Тип прививки по умолчанию</string>
 </resources>

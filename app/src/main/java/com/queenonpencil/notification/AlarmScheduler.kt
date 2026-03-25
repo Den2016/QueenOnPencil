@@ -21,6 +21,21 @@ object AlarmScheduler {
     private const val DEFAULT_HOUR = 8
     private const val DEFAULT_MINUTE = 0
 
+    // Добавь константы в companion object:
+    private const val KEY_DEFAULT_GRAFT_TYPE = "default_graft_type"
+    private const val DEFAULT_GRAFT_TYPE = 0 // по умолчанию первый тип (после удаления "свежее" — это "Яйцо 1 день")
+
+    // Добавь методы:
+    fun getDefaultGraftType(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_DEFAULT_GRAFT_TYPE, DEFAULT_GRAFT_TYPE)
+
+    fun saveDefaultGraftType(context: Context, typeIndex: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_DEFAULT_GRAFT_TYPE, typeIndex)
+            .apply()
+    }
+
     fun getHour(context: Context): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getInt(KEY_HOUR, DEFAULT_HOUR)

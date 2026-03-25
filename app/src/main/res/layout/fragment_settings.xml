@@ -18,4 +18,11 @@
         android:layout_height="wrap_content"
         android:timePickerMode="spinner" />
 
+    <Spinner
+        android:id="@+id/spinnerDefaultGraftType"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:prompt="@string/default_graft_type_prompt" />
+
 </LinearLayout>

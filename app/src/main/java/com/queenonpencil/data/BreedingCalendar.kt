@@ -23,7 +23,6 @@ object BreedingCalendar {
     // tp=2: двухдневная личинка (5 дн от кладки)
     // tp=3: маточник (11 дн от кладки — уже запечатан)
     val GRAFT_TYPES = arrayOf(
-        "Яйцо (свежее)",
         "Яйцо 1 день",
         "Яйцо 2 дня",
         "Яйцо 3 дня",
@@ -34,7 +33,7 @@ object BreedingCalendar {
 
     // Цвета для каждого типа прививки (tp 0–6)
     val GRAFT_COLORS = intArrayOf(
-        0xFF4CAF50.toInt(), // Яйцо свежее — зелёный
+//        0xFF4CAF50.toInt(), // Яйцо свежее — зелёный
         0xFF66BB6A.toInt(), // Яйцо 1 день — светло-зелёный
         0xFF29B6F6.toInt(), // Яйцо 2 дня — голубой
         0xFF42A5F5.toInt(), // Яйцо 3 дня — синий
@@ -43,7 +42,7 @@ object BreedingCalendar {
         0xFFAB47BC.toInt()  // Маточник — фиолетовый
     )
 
-    private val AGE_OFFSETS = intArrayOf(0, 1, 2, 3, 4, 5, 11)
+    private val AGE_OFFSETS = intArrayOf(0, 1, 2, 3, 4, 11)
 
     private val FMT = DateTimeFormatter.ISO_LOCAL_DATE
 
@@ -86,4 +85,8 @@ object BreedingCalendar {
 
     private fun ageOffset(tp: Int): Int =
         AGE_OFFSETS.getOrElse(tp) { 0 }
+
+    // TODO: рефакторинг цветовой схемы календаря
+    fun getColorForGraftType(tp: Int): Int =
+        GRAFT_COLORS.getOrElse(tp) { 0xFFAB47BC.toInt() } // дефолт — фиолетовый
 }

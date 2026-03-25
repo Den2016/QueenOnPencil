@@ -11,6 +11,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.queenonpencil.data.BreedingCalendar
 import com.queenonpencil.databinding.FragmentGraftEditBinding
+import com.queenonpencil.notification.AlarmScheduler
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -80,6 +81,10 @@ class GraftEditFragment : Fragment() {
         viewModel.load(graftId)
 
         if (graftId == 0L) {
+            // Если создаём НОВУЮ прививку (graftId == 0L), установи тип из настроек
+            val defaultType = AlarmScheduler.getDefaultGraftType(requireContext())
+            binding.spinnerType.setSelection(defaultType)
+
             updateDateDisplay()
             refreshPreview()
         }
