@@ -69,7 +69,15 @@ class GraftEditFragment : Fragment() {
                 LocalDate.now()
             }
             updateDateDisplay()
-            binding.spinnerType.setSelection(g.tp)
+            // 👇 ДОБАВЬ ПРОВЕРКУ: если новая прививка и tp=0, бери из настроек
+            val typeToSet = if (graftId == 0L && g.tp == 0) {
+                AlarmScheduler.getDefaultGraftType(requireContext())
+            } else {
+                g.tp
+            }
+
+
+            binding.spinnerType.setSelection(typeToSet)
             binding.etShift.setText(if (g.shift != 0) g.shift.toString() else "")
             binding.etDesc.setText(g.desc)
             refreshPreview()
@@ -80,14 +88,14 @@ class GraftEditFragment : Fragment() {
 
         viewModel.load(graftId)
 
-        if (graftId == 0L) {
-            // Если создаём НОВУЮ прививку (graftId == 0L), установи тип из настроек
-            val defaultType = AlarmScheduler.getDefaultGraftType(requireContext())
-            binding.spinnerType.setSelection(defaultType)
-
-            updateDateDisplay()
-            refreshPreview()
-        }
+//        if (graftId == 0L) {
+//            // Если создаём НОВУЮ прививку (graftId == 0L), установи тип из настроек
+//            val defaultType = AlarmScheduler.getDefaultGraftType(requireContext())
+//            binding.spinnerType.setSelection(defaultType)
+//
+//            updateDateDisplay()
+//            refreshPreview()
+//        }
     }
 
     private fun refreshPreview() {
