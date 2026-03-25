@@ -12,6 +12,12 @@ import com.queenonpencil.databinding.ItemCalendarHeaderBinding
 import com.queenonpencil.util.toDisplayDate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import android.content.Context
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import com.queenonpencil.R
+import com.queenonpencil.databinding.ItemCalendarDayBinding
 
 // Цвета для карточек дней (можно вынести в colors.xml)
 private val COLOR_TODAY = Color.parseColor("#4CAF50")      // зелёный
@@ -25,30 +31,57 @@ private const val LABEL_TOMORROW = "Завтра"
 private const val LABEL_DAY_AFTER = "Послезавтра"
 
 // Определяем, какой день относительно сегодня
+//private fun getDayOffset(dateStr: String): Int {
+//    return try {
+//        val date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE)
+//        val today = LocalDate.now()
+//        date.toEpochDay().toInt() - today.toEpochDay().toInt()
+//    } catch (e: Exception) {
+//        Int.MAX_VALUE
+//    }
+//}
+//
+//// Получаем цвет и лейбл для карточки дня
+//private fun getDayCardStyle(dateStr: String): Pair<Int, String?> {
+//    return when (getDayOffset(dateStr)) {
+//        0 -> COLOR_TODAY to LABEL_TODAY
+//        1 -> COLOR_TOMORROW to LABEL_TOMORROW
+//        2 -> COLOR_DAY_AFTER to LABEL_DAY_AFTER
+//        else -> COLOR_DEFAULT to null
+//    }
+//}
+
+
+//sealed class CalendarItem {
+//    data class Header(val date: String) : CalendarItem()
+//    data class EventItem(val event: CalendarEvent) : CalendarItem()
+//}
+
+// Убираем sealed class - теперь единица списка = день со списком событий
+data class CalendarDay(
+    val date: String,
+    val events: List<CalendarEvent>
+)
+
+// Определяем смещение дня относительно сегодня
 private fun getDayOffset(dateStr: String): Int {
     return try {
         val date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE)
         val today = LocalDate.now()
-        date.toEpochDay().toInt() - today.toEpochDay().toInt()
+        (date.toEpochDay() - today.toEpochDay()).toInt()
     } catch (e: Exception) {
         Int.MAX_VALUE
     }
 }
 
-// Получаем цвет и лейбл для карточки дня
-private fun getDayCardStyle(dateStr: String): Pair<Int, String?> {
+// Возвращаем цвет фона и лейбл для карточки дня
+private fun getDayCardStyle(context: Context, dateStr: String): Pair<Int, String?> {
     return when (getDayOffset(dateStr)) {
-        0 -> COLOR_TODAY to LABEL_TODAY
-        1 -> COLOR_TOMORROW to LABEL_TOMORROW
-        2 -> COLOR_DAY_AFTER to LABEL_DAY_AFTER
-        else -> COLOR_DEFAULT to null
+        0 -> ContextCompat.getColor(context, R.color.calendar_today) to "Сегодня"
+        1 -> ContextCompat.getColor(context, R.color.calendar_tomorrow) to "Завтра"
+        2 -> ContextCompat.getColor(context, R.color.calendar_day_after) to "Послезавтра"
+        else -> ContextCompat.getColor(context, R.color.calendar_default) to null
     }
-}
-
-
-sealed class CalendarItem {
-    data class Header(val date: String) : CalendarItem()
-    data class EventItem(val event: CalendarEvent) : CalendarItem()
 }
 
 class CalendarAdapter(
@@ -56,87 +89,119 @@ class CalendarAdapter(
     private val onGraftClick: (graftingId: Long) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private var items = listOf<CalendarItem>()
+    private var items = listOf<CalendarDay>()
 
     fun submitList(events: List<CalendarEvent>) {
         val grouped = events.groupBy { it.eventDt }
-        val result = mutableListOf<CalendarItem>()
-        for ((date, evts) in grouped) {
-            result.add(CalendarItem.Header(date))
-            evts.forEach { result.add(CalendarItem.EventItem(it)) }
-        }
-        items = result
+
+        // Формируем список дней
+        val days = grouped.map { (date, dayEvents) ->
+            CalendarDay(date = date, events = dayEvents.sortedBy { it.eventDt })
+        }.sortedBy { it.date } // Сортируем по дате
+
+        items = days
         notifyDataSetChanged()
     }
 
-    override fun getItemViewType(position: Int) = when (items[position]) {
-        is CalendarItem.Header -> 0
-        is CalendarItem.EventItem -> 1
-    }
 
     override fun getItemCount() = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == 0) {
-            HeaderVH(ItemCalendarHeaderBinding.inflate(inflater, parent, false))
-        } else {
-            EventVH(ItemCalendarEventBinding.inflate(inflater, parent, false))
-        }
+        val binding = ItemCalendarDayBinding.inflate(
+            LayoutInflater.from(parent.context), parent, false
+        )
+        return DayVH(binding)
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-            is CalendarItem.Header -> (holder as HeaderVH).bind(item)
-            is CalendarItem.EventItem -> (holder as EventVH).bind(item)
-        }
+        val day = items[position] as CalendarDay
+        (holder as DayVH).bind(day, onNoteClick, onGraftClick)
     }
 
-    inner class HeaderVH(private val b: ItemCalendarHeaderBinding) :
-        RecyclerView.ViewHolder(b.root) {
+    inner class DayVH(private val b: ItemCalendarDayBinding) : RecyclerView.ViewHolder(b.root) {
 
-        fun bind(item: CalendarItem.Header) {
-            b.tvDate.text = item.date.toDisplayDate()
+        fun bind(
+            day: CalendarDay,
+            onNoteClick: (eventId: Long, currentNote: String) -> Unit,
+            onGraftClick: (graftingId: Long) -> Unit
+        ) {
+            val context = b.root.context
 
-            // Применяем стиль карточки: цвет фона + лейбл
-            val (bgColor, label) = getDayCardStyle(item.date)
+            // 1. Устанавливаем дату
+            b.tvDate.text = day.date.toDisplayDate()
+
+            // 2. Применяем цвет фона и лейбл из ресурсов
+            val (bgColor, label) = getDayCardStyle(context, day.date)
             b.dayCard.setCardBackgroundColor(bgColor)
 
+            // 3. Показываем/скрываем лейбл
             if (label != null) {
                 b.tvDayLabel.visibility = View.VISIBLE
                 b.tvDayLabel.text = label
-                // Опционально: меняем цвет фона лейбла под контраст
+                // Цвет фона лейбла из ресурса
                 b.tvDayLabel.setBackgroundColor(
-                    if (bgColor == COLOR_DEFAULT) Color.parseColor("#666666") else Color.parseColor("#444444")
+                    ContextCompat.getColor(context, R.color.day_label_bg)
                 )
             } else {
                 b.tvDayLabel.visibility = View.GONE
             }
-        }
-    }
-    inner class EventVH(private val b: ItemCalendarEventBinding) :
-        RecyclerView.ViewHolder(b.root) {
-        fun bind(item: CalendarItem.EventItem) {
-            val ev = item.event
-            b.tvEventDesc.text = ev.eventDesc
-            b.tvGraftInfo.text = "Прививка ${ev.graftingDt.toDisplayDate()}" +
-                    if (ev.graftingDesc.isNotBlank()) " — ${ev.graftingDesc}" else ""
 
-            //val color = BreedingCalendar.GRAFT_COLORS.getOrElse(ev.graftingTp) { 0xFF9E9E9E.toInt() }
-//            b.colorBg.setBackgroundColor(Color.argb(77, Color.red(color), Color.green(color), Color.blue(color)))
-            b.colorBg.setBackgroundColor(Color.TRANSPARENT)
-            if (ev.eventNote.isNotBlank()) {
-                b.tvNote.visibility = View.VISIBLE
-                b.tvNote.text = ev.eventNote
+            // 4. Очищаем контейнер событий
+            b.eventsContainer.removeAllViews()
+
+            // 5. Рендерим события ВНУТРИ карточки
+            if (day.events.isEmpty()) {
+                b.tvNoEvents.visibility = View.VISIBLE
             } else {
-                b.tvNote.visibility = View.GONE
-            }
+                b.tvNoEvents.visibility = View.GONE
 
-            b.root.setOnClickListener { onNoteClick(ev.eventId, ev.eventNote) }
-            b.root.setOnLongClickListener {
-                onGraftClick(ev.graftingId)
-                true
+                day.events.forEachIndexed { index, ev ->
+                    // Инфлейтим event-view ВНУТРЬ контейнера
+                    val eventView = LayoutInflater.from(context)
+                        .inflate(R.layout.item_calendar_event, b.eventsContainer, false)
+
+                    // Заполняем данными
+                    eventView.findViewById<TextView>(R.id.tvEventDesc).text = ev.eventDesc
+                    eventView.findViewById<TextView>(R.id.tvGraftInfo).text =
+                        "Прививка ${ev.graftingDt.toDisplayDate()}" +
+                                if (ev.graftingDesc.isNotBlank()) " — ${ev.graftingDesc}" else ""
+
+                    // Заметка
+                    val noteView = eventView.findViewById<TextView>(R.id.tvNote)
+                    if (ev.eventNote.isNotBlank()) {
+                        noteView.visibility = View.VISIBLE
+                        noteView.text = ev.eventNote
+                    } else {
+                        noteView.visibility = View.GONE
+                    }
+
+                    // ❌ УБИРАЕМ цветной фон по типу прививки (теперь фон у карточки общий)
+                    eventView.findViewById<View>(R.id.colorBg)?.visibility = View.GONE
+
+                    // Клики
+                    eventView.setOnClickListener { onNoteClick(ev.eventId, ev.eventNote) }
+                    eventView.setOnLongClickListener {
+                        onGraftClick(ev.graftingId)
+                        true
+                    }
+
+                    b.eventsContainer.addView(eventView)
+
+                    // Добавляем разделитель между событиями (кроме последнего)
+                    if (index < day.events.lastIndex) {
+                        val divider = View(context).apply {
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                1
+                            ).apply {
+                                marginStart = 16
+                                marginEnd = 16
+                            }
+                            setBackgroundColor(ContextCompat.getColor(context, R.color.primary_light))
+                        }
+                        b.eventsContainer.addView(divider)
+                    }
+                }
             }
         }
-    }
-}
+    }}
