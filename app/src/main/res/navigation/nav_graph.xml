@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/calendarFragment"
-        android:name="com.queenonpencil.ui.calendar.CalendarFragment"
+        android:name="com.beequeencalendar.ui.calendar.CalendarFragment"
         android:label="@string/app_name">
         <action
             android:id="@+id/action_calendar_to_graftEdit"
@@ -15,7 +15,7 @@
 
     <fragment
         android:id="@+id/graftEditFragment"
-        android:name="com.queenonpencil.ui.graft.GraftEditFragment"
+        android:name="com.beequeencalendar.ui.graft.GraftEditFragment"
         android:label="@string/edit_grafting">
         <argument
             android:name="graftId"
@@ -25,7 +25,7 @@
 
     <fragment
         android:id="@+id/archiveFragment"
-        android:name="com.queenonpencil.ui.archive.ArchiveFragment"
+        android:name="com.beequeencalendar.ui.archive.ArchiveFragment"
         android:label="@string/archive">
         <action
             android:id="@+id/action_archive_to_graftEdit"
@@ -34,7 +34,7 @@
 
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.queenonpencil.ui.settings.SettingsFragment"
+        android:name="com.beequeencalendar.ui.settings.SettingsFragment"
         android:label="@string/settings" />
 
 </navigation>

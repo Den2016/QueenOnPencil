@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace 'com.queenonpencil'
+    namespace 'com.beequeencalendar'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.queenonpencil"
+        applicationId "com.beequeencalendar"
         minSdk 21
         targetSdk 34
         versionCode 7
-        versionName "2.6"
+        versionName "2.7"
     }
 
     buildTypes {
@@ -38,7 +38,7 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all {
-            outputFileName = "QueenOnPencil-${variant.versionName}.apk"
+            outputFileName = "BeeQueenCalendar-${variant.versionName}.apk"
         }
     }
 }
