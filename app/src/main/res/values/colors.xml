@@ -5,4 +5,9 @@
     <color name="primary_light">#E8E6F7</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="ic_launcher_background">#111111</color>
+    <color name="calendar_today">#4CAF50</color>
+    <color name="calendar_tomorrow">#FF9800</color>
+    <color name="calendar_day_after">#29B6F6</color>
+    <color name="calendar_default">@android:color/white</color>
+    <color name="day_label_bg">#444444</color>
 </resources>

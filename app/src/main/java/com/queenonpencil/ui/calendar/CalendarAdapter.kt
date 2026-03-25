@@ -10,6 +10,41 @@ import com.queenonpencil.data.dao.CalendarEvent
 import com.queenonpencil.databinding.ItemCalendarEventBinding
 import com.queenonpencil.databinding.ItemCalendarHeaderBinding
 import com.queenonpencil.util.toDisplayDate
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+// Цвета для карточек дней (можно вынести в colors.xml)
+private val COLOR_TODAY = Color.parseColor("#4CAF50")      // зелёный
+private val COLOR_TOMORROW = Color.parseColor("#FF9800")    // оранжевый
+private val COLOR_DAY_AFTER = Color.parseColor("#29B6F6")   // голубой
+private val COLOR_DEFAULT = Color.WHITE                     // белый
+
+// Лейблы
+private const val LABEL_TODAY = "Сегодня"
+private const val LABEL_TOMORROW = "Завтра"
+private const val LABEL_DAY_AFTER = "Послезавтра"
+
+// Определяем, какой день относительно сегодня
+private fun getDayOffset(dateStr: String): Int {
+    return try {
+        val date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE)
+        val today = LocalDate.now()
+        date.toEpochDay().toInt() - today.toEpochDay().toInt()
+    } catch (e: Exception) {
+        Int.MAX_VALUE
+    }
+}
+
+// Получаем цвет и лейбл для карточки дня
+private fun getDayCardStyle(dateStr: String): Pair<Int, String?> {
+    return when (getDayOffset(dateStr)) {
+        0 -> COLOR_TODAY to LABEL_TODAY
+        1 -> COLOR_TOMORROW to LABEL_TOMORROW
+        2 -> COLOR_DAY_AFTER to LABEL_DAY_AFTER
+        else -> COLOR_DEFAULT to null
+    }
+}
+
 
 sealed class CalendarItem {
     data class Header(val date: String) : CalendarItem()
@@ -59,11 +94,26 @@ class CalendarAdapter(
 
     inner class HeaderVH(private val b: ItemCalendarHeaderBinding) :
         RecyclerView.ViewHolder(b.root) {
+
         fun bind(item: CalendarItem.Header) {
             b.tvDate.text = item.date.toDisplayDate()
+
+            // Применяем стиль карточки: цвет фона + лейбл
+            val (bgColor, label) = getDayCardStyle(item.date)
+            b.dayCard.setCardBackgroundColor(bgColor)
+
+            if (label != null) {
+                b.tvDayLabel.visibility = View.VISIBLE
+                b.tvDayLabel.text = label
+                // Опционально: меняем цвет фона лейбла под контраст
+                b.tvDayLabel.setBackgroundColor(
+                    if (bgColor == COLOR_DEFAULT) Color.parseColor("#666666") else Color.parseColor("#444444")
+                )
+            } else {
+                b.tvDayLabel.visibility = View.GONE
+            }
         }
     }
-
     inner class EventVH(private val b: ItemCalendarEventBinding) :
         RecyclerView.ViewHolder(b.root) {
         fun bind(item: CalendarItem.EventItem) {
@@ -73,9 +123,8 @@ class CalendarAdapter(
                     if (ev.graftingDesc.isNotBlank()) " — ${ev.graftingDesc}" else ""
 
             //val color = BreedingCalendar.GRAFT_COLORS.getOrElse(ev.graftingTp) { 0xFF9E9E9E.toInt() }
-            val color = BreedingCalendar.getColorForGraftType(0)
-            b.colorBg.setBackgroundColor(Color.argb(77, Color.red(color), Color.green(color), Color.blue(color)))
-
+//            b.colorBg.setBackgroundColor(Color.argb(77, Color.red(color), Color.green(color), Color.blue(color)))
+            b.colorBg.setBackgroundColor(Color.TRANSPARENT)
             if (ev.eventNote.isNotBlank()) {
                 b.tvNote.visibility = View.VISIBLE
                 b.tvNote.text = ev.eventNote
