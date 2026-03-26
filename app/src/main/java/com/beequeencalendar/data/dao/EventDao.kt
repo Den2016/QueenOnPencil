@@ -32,7 +32,7 @@ interface EventDao {
                grafting.tp AS graftingTp
         FROM events
         INNER JOIN grafting ON events.grafting_id = grafting.id
-        WHERE events.dt BETWEEN date('now','-1 day') AND date('now','+14 days')
+        WHERE events.dt BETWEEN date('now','-0 day') AND date('now','+32 days')
         ORDER BY events.dt, grafting.dt
     """)
     fun getUpcomingEvents(): LiveData<List<CalendarEvent>>

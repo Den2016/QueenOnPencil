@@ -57,7 +57,7 @@ class GraftEditFragment : Fragment() {
         binding.btnSave.setOnClickListener {
             val tp = binding.spinnerType.selectedItemPosition
             val dt = selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-            val shift = binding.etShift.text.toString().toIntOrNull() ?: 0
+            val shift = 0//binding.etShift.text.toString().toIntOrNull() ?: 0
             val desc = binding.etDesc.text.toString()
             viewModel.save(tp, dt, shift, desc, graftId)
         }
@@ -78,7 +78,7 @@ class GraftEditFragment : Fragment() {
 
 
             binding.spinnerType.setSelection(typeToSet)
-            binding.etShift.setText(if (g.shift != 0) g.shift.toString() else "")
+            //binding.etShift.setText(if (g.shift != 0) g.shift.toString() else "")
             binding.etDesc.setText(g.desc)
             refreshPreview()
         }
