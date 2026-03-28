@@ -36,7 +36,7 @@ class ArchiveAdapter(
             b.tvDesc.text = g.desc.ifBlank { "Без описания" }
 
             // ✅ Форматируем технические данные
-            //"Тип: ${g.tp} | Сдвиг: ${g.shift} дн. | ${g.dt}".also { b.tvTechData.text = it }
+//            "Тип: ${g.tp} | Сдвиг: ${g.shift} | ${g.dt}".also { b.tvTechData.text = it }
 
             b.root.setOnClickListener { onClick(g.id) }
             b.btnDelete.setOnClickListener { onDelete(g.id) }

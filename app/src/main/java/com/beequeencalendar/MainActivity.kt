@@ -4,12 +4,14 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupActionBarWithNavController
+import com.beequeencalendar.data.AppDatabase
 import com.beequeencalendar.databinding.ActivityMainBinding
 import com.beequeencalendar.notification.NotificationHelper
 
@@ -32,6 +34,12 @@ class MainActivity : AppCompatActivity() {
 
         NotificationHelper.createChannel(this)
         requestNotificationPermission()
+// В любом месте кода (например, в onCreate Activity):
+        val db = AppDatabase.getInstance(applicationContext)
+        val version = db.openHelper.writableDatabase.version
+        Log.d("MIGRATION_CHECK", "Database version: $version")
+
+// Должно вывести: Database version: 3
     }
 
     private fun requestNotificationPermission() {

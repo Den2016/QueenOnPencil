@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.beequeencalendar.R
 import com.beequeencalendar.data.BreedingCalendar
 import com.beequeencalendar.databinding.FragmentGraftEditBinding
 import com.beequeencalendar.notification.AlarmScheduler
@@ -31,9 +32,24 @@ class GraftEditFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         graftId = arguments?.getLong("graftId") ?: 0L
 
-        binding.spinnerType.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_dropdown_item, BreedingCalendar.GRAFT_TYPES
-        )
+        // По умолчанию матка (tp = 0)
+        var currentTp = 0
+
+        // Инициализация спиннера для матки
+        updateSpinnerAdapter(tp = 0)
+        binding.spinnerType.setSelection(0)
+
+        // Обновляем превью при переключении пола
+        binding.radioGroup.setOnCheckedChangeListener { _, checkedId ->
+            currentTp = if (checkedId == R.id.radioButton2) 1 else 0  // трутень = 1, матка = 0
+            updateSpinnerAdapter(tp = currentTp)
+            binding.spinnerType.setSelection(0)  // сброс на первый элемент
+            refreshPreview()
+        }
+
+//        binding.spinnerType.adapter = ArrayAdapter(
+//            requireContext(), android.R.layout.simple_spinner_dropdown_item, BreedingCalendar.GRAFT_TYPES
+//        )
 
         binding.spinnerType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) {
@@ -41,6 +57,7 @@ class GraftEditFragment : Fragment() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
 
         val previewAdapter = EventPreviewAdapter()
         binding.rvPreview.layoutManager = LinearLayoutManager(requireContext())
@@ -55,9 +72,13 @@ class GraftEditFragment : Fragment() {
         }
 
         binding.btnSave.setOnClickListener {
-            val tp = binding.spinnerType.selectedItemPosition
+            val shift = binding.spinnerType.selectedItemPosition
             val dt = selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-            val shift = 0//binding.etShift.text.toString().toIntOrNull() ?: 0
+            val tp = when (binding.radioGroup.checkedRadioButtonId) {
+                R.id.radioButton -> 0      // матка
+                R.id.radioButton2 -> 1     // трутень
+                else -> 0                  // по умолчанию матка
+            }
             val desc = binding.etDesc.text.toString()
             viewModel.save(tp, dt, shift, desc, graftId)
         }
@@ -69,16 +90,26 @@ class GraftEditFragment : Fragment() {
                 LocalDate.now()
             }
             updateDateDisplay()
-            // 👇 ДОБАВЬ ПРОВЕРКУ: если новая прививка и tp=0, бери из настроек
-            val typeToSet = if (graftId == 0L && g.tp == 0) {
+            // 👇 ДОБАВЬ ПРОВЕРКУ: если новая прививка и shift=0, бери из настроек
+            val typeToSet = if (graftId == 0L ) {
                 AlarmScheduler.getDefaultGraftType(requireContext())
             } else {
-                g.tp
+                g.shift
+            }
+            if(graftId != 0L){
+                currentTp = g.tp
+
+                // Устанавливаем RadioGroup
+                binding.radioGroup.check(
+                    if (currentTp == 1) R.id.radioButton2 else R.id.radioButton
+                )
+
+                // Обновляем адаптер спиннера
+                updateSpinnerAdapter(tp = currentTp)
             }
 
 
             binding.spinnerType.setSelection(typeToSet)
-            //binding.etShift.setText(if (g.shift != 0) g.shift.toString() else "")
             binding.etDesc.setText(g.desc)
             refreshPreview()
         }
@@ -88,20 +119,19 @@ class GraftEditFragment : Fragment() {
 
         viewModel.load(graftId)
 
-//        if (graftId == 0L) {
-//            // Если создаём НОВУЮ прививку (graftId == 0L), установи тип из настроек
-//            val defaultType = AlarmScheduler.getDefaultGraftType(requireContext())
-//            binding.spinnerType.setSelection(defaultType)
-//
-//            updateDateDisplay()
-//            refreshPreview()
-//        }
     }
 
     private fun refreshPreview() {
+        // Определяем пол: 0 = матка, 1 = трутень
+        val sex = when (binding.radioGroup.checkedRadioButtonId) {
+            R.id.radioButton -> 0      // матка
+            R.id.radioButton2 -> 1     // трутень
+            else -> 0                  // по умолчанию матка
+        }
         viewModel.updatePreview(
             selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-            binding.spinnerType.selectedItemPosition
+            binding.spinnerType.selectedItemPosition,
+            sex
         )
     }
 
@@ -115,4 +145,20 @@ class GraftEditFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    // Функция обновления адаптера спиннера
+    private fun updateSpinnerAdapter(tp: Int) {
+        val types = if (tp == 1) {
+            BreedingCalendar.DRON_TYPES  // трутень
+        } else {
+            BreedingCalendar.GRAFT_TYPES  // матка
+        }
+
+        binding.spinnerType.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            types
+        )
+    }
+
 }

@@ -17,11 +17,18 @@ object BreedingCalendar {
         27 to "Контроль засева"
     )
 
+    private val DRON_EVENTS = listOf(
+        0 to "Яйцо трутневое",
+        15 to "Можно планировать вывод маток",
+        37 to "Отбор трута для ИО",
+        48 to "Окончание срока годности трута для ИО"
+    )
+
     // Возраст на момент прививки → сдвиг назад к дате кладки яйца
-    // tp=0: яйцо (0 дн от кладки)
-    // tp=1: однодневная личинка (4 дн от кладки: 3 дня яйцо + 1 день личинка)
-    // tp=2: двухдневная личинка (5 дн от кладки)
-    // tp=3: маточник (11 дн от кладки — уже запечатан)
+    // shift=0: яйцо (0 дн от кладки)
+    // shift=1: однодневная личинка (4 дн от кладки: 3 дня яйцо + 1 день личинка)
+    // shift=2: двухдневная личинка (5 дн от кладки)
+    // shift=3: маточник (11 дн от кладки — уже запечатан)
     val GRAFT_TYPES = arrayOf(
         "Яйцо 1 день",
         "Яйцо 2 дня",
@@ -31,24 +38,33 @@ object BreedingCalendar {
         "Маточник (запечатан)"
     )
 
-    // Цвета для каждого типа прививки (tp 0–6)
-    val GRAFT_COLORS = intArrayOf(
-        0xFF66BB6A.toInt(), // Яйцо 1 день — светло-зелёный
-        0xFF29B6F6.toInt(), // Яйцо 2 дня — голубой
-        0xFF42A5F5.toInt(), // Яйцо 3 дня — синий
-        0xFFFF9800.toInt(), // Личинка 1 день — оранжевый
-        0xFFFF7043.toInt(), // Личинка 2 дня — красно-оранжевый
-        0xFFAB47BC.toInt()  // Маточник — фиолетовый
+    val DRON_TYPES = arrayOf(
+        "Яйцо 1 день",
+        "Личинка 1 день",
+        "Печатка трутня"
     )
 
-    private val AGE_OFFSETS = intArrayOf(0, 1, 2, 3, 4, 11)
+    private val AGE_OFFSETS = intArrayOf(0, 1, 2, 3, 4, 8)
+    private val DRONE_OFFSETS = intArrayOf(0, 3, 9)  // ✅ для трутней
 
     private val FMT = DateTimeFormatter.ISO_LOCAL_DATE
 
-    fun generateEvents(graftingId: Long, graftingDate: String, tp: Int): List<Event> {
-        val eggDate = calcEggDate(graftingDate, tp)
+
+    fun generateEvents(graftingId: Long, graftingDate: String, shift: Int, tp: Int): List<Event> {
+        val eggDate = calcEggDate(graftingDate, shift, tp)
+        if(tp==1){
+            return DRON_EVENTS
+                .filter { (day, _) -> day > dronOffset(shift) }
+                .map { (dayOffset, description) ->
+                    Event(
+                        graftingId = graftingId,
+                        dt = eggDate.plusDays(dayOffset.toLong()).format(FMT),
+                        desc = description
+                    )
+                }
+        }
         return EVENTS
-            .filter { (day, _) -> day > ageOffset(tp) }
+            .filter { (day, _) -> day > ageOffset(shift) }
             .map { (dayOffset, description) ->
                 Event(
                     graftingId = graftingId,
@@ -58,34 +74,48 @@ object BreedingCalendar {
             }
     }
 
-    fun previewEvents(graftingDate: String, tp: Int): List<Pair<String, String>> {
-        val eggDate = calcEggDate(graftingDate, tp)
+    fun previewEvents(graftingDate: String, shift: Int, tp: Int): List<Pair<String, String>> {
+        val eggDate = calcEggDate(graftingDate, shift, tp)
         val result = mutableListOf<Pair<String, String>>()
-        if (tp > 0) {
+        if (shift > 0) {
             result.add(eggDate.format(FMT) to "Дата кладки яйца")
         }
-        EVENTS
-            .filter { (day, _) -> day > ageOffset(tp) }
-            .forEach { (dayOffset, description) ->
-                result.add(eggDate.plusDays(dayOffset.toLong()).format(FMT) to description)
-            }
+        if(tp == 0) {
+            EVENTS
+                .filter { (day, _) -> day > ageOffset(shift) }
+                .forEach { (dayOffset, description) ->
+                    result.add(eggDate.plusDays(dayOffset.toLong()).format(FMT) to description)
+                }
+        }
+        if(tp == 1){
+            DRON_EVENTS
+                .filter { (day, _) -> day > dronOffset(shift) }
+                .forEach { (dayOffset, description) ->
+                    result.add(eggDate.plusDays(dayOffset.toLong()).format(FMT) to description)
+                }
+
+        }
         return result
     }
 
-    fun eggDateString(graftingDate: String, tp: Int): String? {
-        if (tp == 0) return null
-        return calcEggDate(graftingDate, tp).format(FMT)
-    }
+//    fun eggDateString(graftingDate: String, shift: Int): String? {
+//        if (shift == 0) return null
+//        return calcEggDate(graftingDate, shift).format(FMT)
+//    }
 
-    private fun calcEggDate(graftingDate: String, tp: Int): LocalDate {
+    private fun calcEggDate(graftingDate: String, shift: Int, tp: Int): LocalDate {
         val graftDate = LocalDate.parse(graftingDate, FMT)
-        return graftDate.minusDays(ageOffset(tp).toLong())
+        if(tp == 0) {
+            return graftDate.minusDays(ageOffset(shift).toLong())
+        }else{
+            return graftDate.minusDays(dronOffset(shift).toLong())
+        }
     }
 
-    private fun ageOffset(tp: Int): Int =
-        AGE_OFFSETS.getOrElse(tp) { 0 }
+    private fun ageOffset(shift: Int): Int =
+        AGE_OFFSETS.getOrElse(shift) { 0 }
 
-    // TODO: рефакторинг цветовой схемы календаря
-    fun getColorForGraftType(tp: Int): Int =
-        GRAFT_COLORS.getOrElse(tp) { 0xFFAB47BC.toInt() } // дефолт — фиолетовый
+    private fun dronOffset(shift: Int): Int =
+        DRONE_OFFSETS.getOrElse(shift) { 0 }
+
 }

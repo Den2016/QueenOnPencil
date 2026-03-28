@@ -11,7 +11,7 @@ import com.beequeencalendar.data.dao.GraftingDao
 import com.beequeencalendar.data.entity.Event
 import com.beequeencalendar.data.entity.Grafting
 
-@Database(entities = [Grafting::class, Event::class], version = 2, exportSchema = false)
+@Database(entities = [Grafting::class, Event::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun graftingDao(): GraftingDao
     abstract fun eventDao(): EventDao
@@ -26,13 +26,41 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Создаём временную таблицу с правильным порядком колонок
+                db.execSQL("""
+                    CREATE TABLE grafting_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        shift INTEGER NOT NULL,
+                        dt TEXT NOT NULL,
+                        tp INTEGER NOT NULL,
+                        desc TEXT NOT NULL
+                    )
+                """.trimIndent())
+
+                // Копируем данные, меняя местами значения tp и shift
+                db.execSQL("""
+                    INSERT INTO grafting_new (id, shift, dt, tp, desc)
+                    SELECT id, tp, dt, shift, desc FROM grafting
+                """.trimIndent())
+
+                // Удаляем старую таблицу и переименовываем новую
+                db.execSQL("DROP TABLE grafting")
+                db.execSQL("ALTER TABLE grafting_new RENAME TO grafting")
+
+                // Пересоздаём индексы если были (в текущей версии их нет)
+            }
+        }
+
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "bqc.db"
-                ).addMigrations(MIGRATION_1_2)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { INSTANCE = it }
             }
     }

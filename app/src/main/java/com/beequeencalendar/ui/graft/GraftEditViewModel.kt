@@ -35,9 +35,9 @@ class GraftEditViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun updatePreview(date: String, tp: Int) {
+    fun updatePreview(date: String, shift: Int, tp: Int) {
         try {
-            _preview.value = BreedingCalendar.previewEvents(date, tp)
+            _preview.value = BreedingCalendar.previewEvents(date, shift, tp)
         } catch (_: Exception) { }
     }
 
@@ -52,7 +52,7 @@ class GraftEditViewModel(app: Application) : AndroidViewModel(app) {
             } else {
                 id = graftingDao.insert(Grafting(tp = tp, dt = dt, shift = shift, desc = desc))
             }
-            val events = BreedingCalendar.generateEvents(id, dt, tp)
+            val events = BreedingCalendar.generateEvents(id, dt, shift, tp)
             eventDao.insertAll(events)
             val savedEvents = eventDao.getFutureEvents().filter { it.graftingId == id }
             AlarmScheduler.scheduleEvents(getApplication(), savedEvents)

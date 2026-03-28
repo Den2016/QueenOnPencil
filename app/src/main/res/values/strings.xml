@@ -19,4 +19,6 @@
     <string name="note_title">Заметка</string>
     <string name="note_hint">Введите заметку…</string>
     <string name="default_graft_type_prompt">Тип прививки по умолчанию</string>
+    <string name="tp0">Матка</string>
+    <string name="tp1">Трутень</string>
 </resources>
