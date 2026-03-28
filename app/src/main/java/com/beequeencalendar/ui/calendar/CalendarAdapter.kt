@@ -27,32 +27,6 @@ private const val LABEL_TODAY = "Сегодня"
 private const val LABEL_TOMORROW = "Завтра"
 private const val LABEL_DAY_AFTER = "Послезавтра"
 
-// Определяем, какой день относительно сегодня
-//private fun getDayOffset(dateStr: String): Int {
-//    return try {
-//        val date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE)
-//        val today = LocalDate.now()
-//        date.toEpochDay().toInt() - today.toEpochDay().toInt()
-//    } catch (e: Exception) {
-//        Int.MAX_VALUE
-//    }
-//}
-//
-//// Получаем цвет и лейбл для карточки дня
-//private fun getDayCardStyle(dateStr: String): Pair<Int, String?> {
-//    return when (getDayOffset(dateStr)) {
-//        0 -> COLOR_TODAY to LABEL_TODAY
-//        1 -> COLOR_TOMORROW to LABEL_TOMORROW
-//        2 -> COLOR_DAY_AFTER to LABEL_DAY_AFTER
-//        else -> COLOR_DEFAULT to null
-//    }
-//}
-
-
-//sealed class CalendarItem {
-//    data class Header(val date: String) : CalendarItem()
-//    data class EventItem(val event: CalendarEvent) : CalendarItem()
-//}
 
 // Убираем sealed class - теперь единица списка = день со списком событий
 data class CalendarDay(

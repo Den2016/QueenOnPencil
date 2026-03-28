@@ -34,14 +34,8 @@
         <Spinner
             android:id="@+id/spinnerType"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginBottom="12dp" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/series_number"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="12dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
@@ -91,9 +85,9 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvPreview"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:nestedScrollingEnabled="true"
+                android:nestedScrollingEnabled="false"
                 android:overScrollMode="ifContentScrolls" />
         </LinearLayout>
 

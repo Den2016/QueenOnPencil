@@ -46,8 +46,12 @@ object NotificationHelper {
         }
         val pending = PendingIntent.getActivity(
             context, eventId.toInt(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+            // ✅ Флаг IMMUTABLE только для API 23+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }        )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -59,7 +63,17 @@ object NotificationHelper {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
-        context.getSystemService(NotificationManager::class.java)
-            .notify(eventId.toInt(), notification)
+
+        // ✅ Безопасное получение NotificationManager
+        getNotificationManager(context)?.notify(eventId.toInt(), notification)
+    }
+    // ✅ Универсальный метод для всех версий API
+    @Suppress("DEPRECATION")
+    private fun getNotificationManager(context: Context): NotificationManager? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            context.getSystemService(NotificationManager::class.java)
+        } else {
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        }
     }
 }
