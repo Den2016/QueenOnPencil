@@ -35,7 +35,9 @@ object BreedingCalendar {
         "Яйцо 3 дня",
         "Личинка 1 день",
         "Личинка 2 дня",
-        "Маточник (запечатан)"
+        "Маточник (запечатан)",
+        "Выход матки (день 1)",
+        "Выход матки (день 2)",
     )
 
     val DRON_TYPES = arrayOf(
@@ -44,7 +46,7 @@ object BreedingCalendar {
         "Печатка трутня"
     )
 
-    private val AGE_OFFSETS = intArrayOf(0, 1, 2, 3, 4, 8)
+    private val AGE_OFFSETS = intArrayOf(0, 1, 2, 3, 4, 8, 14, 15)
     private val DRONE_OFFSETS = intArrayOf(0, 3, 9)  // ✅ для трутней
 
     private val FMT = DateTimeFormatter.ISO_LOCAL_DATE
@@ -82,7 +84,7 @@ object BreedingCalendar {
         }
         if(tp == 0) {
             EVENTS
-                .filter { (day, _) -> day > ageOffset(shift) }
+                //.filter { (day, _) -> day > ageOffset(shift) }
                 .forEach { (dayOffset, description) ->
                     result.add(eggDate.plusDays(dayOffset.toLong()).format(FMT) to description)
                 }

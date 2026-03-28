@@ -13,6 +13,7 @@ import com.beequeencalendar.R
 import com.beequeencalendar.data.BreedingCalendar
 import com.beequeencalendar.databinding.FragmentGraftEditBinding
 import com.beequeencalendar.notification.AlarmScheduler
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -115,7 +116,46 @@ class GraftEditFragment : Fragment() {
         }
 
         viewModel.preview.observe(viewLifecycleOwner) { previewAdapter.submitList(it) }
-        viewModel.saved.observe(viewLifecycleOwner) { if (it) findNavController().popBackStack() }
+// ✅ ЗАМЕНИТЬ наблюдение за viewModel.saved на viewModel.saveResult
+        viewModel.saveResult.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is GraftEditViewModel.SaveResult.Success -> {
+                    findNavController().popBackStack()
+                }
+                is GraftEditViewModel.SaveResult.Warning -> {
+                    // ⚠️ Показываем диалог с предупреждением
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Внимание")
+                        .setMessage(result.message)
+                        .setPositiveButton("Сохранить без будильников") { _, _ ->
+                            findNavController().popBackStack()
+                        }
+                        .setNegativeButton("Настройки") { _, _ ->
+                            // 📲 Отправляем пользователя в настройки для выдачи разрешения
+                            AlarmScheduler.requestExactAlarmPermission(requireContext())
+                        }
+                        .setOnDismissListener {
+                            viewModel.resetSaveResult()
+                        }
+                        .show()
+                }
+                is GraftEditViewModel.SaveResult.Error -> {
+                    // ❌ Ошибка сохранения
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Ошибка")
+                        .setMessage("Не удалось сохранить прививку. Попробуйте ещё раз.")
+                        .setPositiveButton("OK") { _, _ ->
+                            viewModel.resetSaveResult()
+                        }
+                        .show()
+                }
+                null -> {}
+            }
+        }
+
+// ✅ УДАЛИТЬ старое наблюдение:
+// viewModel.saved.observe(viewLifecycleOwner) { if (it) findNavController().popBackStack() }
+        //viewModel.saved.observe(viewLifecycleOwner) { if (it) findNavController().popBackStack() }
 
         viewModel.load(graftId)
 

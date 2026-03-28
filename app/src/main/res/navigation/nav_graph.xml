@@ -32,9 +32,27 @@
             app:destination="@id/graftEditFragment" />
     </fragment>
 
+
+    <!-- ✅ ДОБАВИТЬ после settingsFragment -->
+    <fragment
+        android:id="@+id/scheduledAlarmsFragment"
+        android:name="com.beequeencalendar.ui.settings.ScheduledAlarmsFragment"
+        android:label="@string/scheduled_alarms">
+
+        <action
+            android:id="@+id/action_scheduledAlarmsFragment_to_settingsFragment"
+            app:popUpTo="@id/settingsFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <!-- ✅ ДОБАВИТЬ action в settingsFragment -->
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.beequeencalendar.ui.settings.SettingsFragment"
-        android:label="@string/settings" />
+        android:label="@string/settings">
 
+        <action
+            android:id="@+id/action_settingsFragment_to_scheduledAlarmsFragment"
+            app:destination="@id/scheduledAlarmsFragment" />
+    </fragment>
 </navigation>

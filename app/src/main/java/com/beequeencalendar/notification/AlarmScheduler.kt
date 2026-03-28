@@ -81,21 +81,18 @@ object AlarmScheduler {
         }
     }
 
+    // ✅ ОБНОВИТЬ метод scheduleEvent (вызов setAlarmSafe заменить на setAlarmClock):
     fun scheduleEvent(context: Context, event: Event) {
-
         val alarmManager = getAlarmManager(context) ?: return
 
-        // Проверяем разрешение на Android 12+
+        // Проверка разрешения для Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !canScheduleExactAlarms(context)) {
-            // Разрешения нет — логируем или запрашиваем
             android.util.Log.w("AlarmScheduler", "No SCHEDULE_EXACT_ALARM permission")
             return
         }
 
-
         val hour = getHour(context)
         val minute = getMinute(context)
-
         val eventDate = LocalDate.parse(event.dt, DateTimeFormatter.ISO_LOCAL_DATE)
         val alarmTime = LocalDateTime.of(eventDate, java.time.LocalTime.of(hour, minute))
         val millis = alarmTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -104,13 +101,39 @@ object AlarmScheduler {
 
         val pending = buildPendingIntent(context, event)
 
-        try {
-            setAlarmSafe(alarmManager, millis, pending)
-        } catch (e: SecurityException) {
-            android.util.Log.e("AlarmScheduler", "Failed to schedule alarm: ${e.message}")
-            // Здесь можно показать пользователю диалог с просьбой выдать разрешение
-        }
+        // ✅ Вызываем новый метод
+        setAlarmSafe(alarmManager, millis, pending)
     }
+//    fun scheduleEvent(context: Context, event: Event) {
+//
+//        val alarmManager = getAlarmManager(context) ?: return
+//
+//        // Проверяем разрешение на Android 12+
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !canScheduleExactAlarms(context)) {
+//            // Разрешения нет — логируем или запрашиваем
+//            android.util.Log.w("AlarmScheduler", "No SCHEDULE_EXACT_ALARM permission")
+//            return
+//        }
+//
+//
+//        val hour = getHour(context)
+//        val minute = getMinute(context)
+//
+//        val eventDate = LocalDate.parse(event.dt, DateTimeFormatter.ISO_LOCAL_DATE)
+//        val alarmTime = LocalDateTime.of(eventDate, java.time.LocalTime.of(hour, minute))
+//        val millis = alarmTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+//
+//        if (millis <= System.currentTimeMillis()) return
+//
+//        val pending = buildPendingIntent(context, event)
+//
+//        try {
+//            setAlarmSafe(alarmManager, millis, pending)
+//        } catch (e: SecurityException) {
+//            android.util.Log.e("AlarmScheduler", "Failed to schedule alarm: ${e.message}")
+//            // Здесь можно показать пользователю диалог с просьбой выдать разрешение
+//        }
+//    }
 
     // ✅ Вспомогательный метод для получения AlarmManager (совместим с API 21)
     @Suppress("DEPRECATION")
@@ -130,27 +153,64 @@ object AlarmScheduler {
         alarmManager.cancel(pending)
     }    // ✅ Безопасная установка будильника с фолбэком
 
+//    private fun setAlarmSafe(alarmManager: AlarmManager, millis: Long, pending: PendingIntent) {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            try {
+//                // API 23+: точный будильник
+//                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pending)
+//            } catch (e: SecurityException) {
+//                // Если разрешения нет — пробуем менее точный будильник
+//                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pending)
+//            }
+//        } else
+//            // API 19-22
+//            alarmManager.setExact(AlarmManager.RTC_WAKEUP, millis, pending)
+//    }
+
+    // ✅ ЗАМЕНИТЬ метод setAlarmSafe на этот:
     private fun setAlarmSafe(alarmManager: AlarmManager, millis: Long, pending: PendingIntent) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
-                // API 23+: точный будильник
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pending)
+                // setAlarmClock — самый надёжный метод!
+                // Система выводит устройство из Doze заранее
+                val alarmClockInfo = AlarmManager.AlarmClockInfo(millis, pending)
+                alarmManager.setAlarmClock(alarmClockInfo, pending)
+                android.util.Log.d("AlarmScheduler", "✅ Alarm clock set for: ${java.util.Date(millis)}")
             } catch (e: SecurityException) {
-                // Если разрешения нет — пробуем менее точный будильник
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pending)
+                android.util.Log.e("AlarmScheduler", "❌ SecurityException: ${e.message}")
+                // Фолбэк на setExactAndAllowWhileIdle
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pending)
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, millis, pending)
+                }
             }
-        } else
-            // API 19-22
+        } else {
             alarmManager.setExact(AlarmManager.RTC_WAKEUP, millis, pending)
+        }
     }
 
-    // ✅ Создание PendingIntent с проверкой флагов
+//    // ✅ Создание PendingIntent с проверкой флагов
+//    private fun buildPendingIntent(context: Context, event: Event): PendingIntent {
+//        val intent = Intent(context, AlarmReceiver::class.java).apply {
+//            putExtra(AlarmReceiver.EXTRA_EVENT_ID, event.id)
+//            putExtra(AlarmReceiver.EXTRA_TITLE, event.desc)
+//            putExtra(AlarmReceiver.EXTRA_TEXT, event.dt)
+//        }
+//        return buildPendingIntentLegacy(context, event.id.toInt(), intent)
+//    }
+
+    // ✅ Убедитесь что requestCode уникален для каждого события
     private fun buildPendingIntent(context: Context, event: Event): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra(AlarmReceiver.EXTRA_EVENT_ID, event.id)
             putExtra(AlarmReceiver.EXTRA_TITLE, event.desc)
             putExtra(AlarmReceiver.EXTRA_TEXT, event.dt)
+            // ✅ Важно: установите флаг, чтобы каждый будильник был уникален
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+
+        // ✅ Используем event.id как requestCode для уникальности
         return buildPendingIntentLegacy(context, event.id.toInt(), intent)
     }
 
@@ -186,5 +246,44 @@ object AlarmScheduler {
         }
         events.forEach { scheduleEvent(context, it) }
     }
+// ✅ ДОБАВИТЬ в конец объекта AlarmScheduler:
 
+    /**
+     * Получить все будущие события с информацией о будильниках
+     */
+    suspend fun getScheduledAlarms(context: Context): List<ScheduledAlarmInfo> {
+        val events = withContext(Dispatchers.IO) {
+            AppDatabase.getInstance(context).eventDao().getFutureEvents()
+        }
+
+        val hour = getHour(context)
+        val minute = getMinute(context)
+
+        return events.map { event ->
+            val eventDate = LocalDate.parse(event.dt, DateTimeFormatter.ISO_LOCAL_DATE)
+            val alarmTime = LocalDateTime.of(eventDate, java.time.LocalTime.of(hour, minute))
+            val millis = alarmTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+            ScheduledAlarmInfo(
+                eventId = event.id,
+                graftingId = event.graftingId,
+                eventDesc = event.desc,
+                eventDate = event.dt,
+                alarmTime = millis,
+                isExactAlarm = canScheduleExactAlarms(context)
+            )
+        }.sortedBy { it.alarmTime }
+    }
+
+    /**
+     * Данные для отображения в списке будильников
+     */
+    data class ScheduledAlarmInfo(
+        val eventId: Long,
+        val graftingId: Long,
+        val eventDesc: String,
+        val eventDate: String,
+        val alarmTime: Long,
+        val isExactAlarm: Boolean
+    )
 }

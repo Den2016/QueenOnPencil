@@ -21,4 +21,9 @@
     <string name="default_graft_type_prompt">Тип прививки по умолчанию</string>
     <string name="tp0">Матка</string>
     <string name="tp1">Трутень</string>
+    <!-- ✅ ДОБАВИТЬ в конец файла -->
+    <string name="scheduled_alarms">Запланированные будильники</string>
+    <string name="no_scheduled_alarms">Нет запланированных будильников</string>
+    <string name="cancel_alarm">Отменить будильник</string>
+    <string name="cancel_alarm_confirm">Вы уверены, что хотите отменить это уведомление?</string>
 </resources>
