@@ -23,4 +23,15 @@ class ArchiveViewModel(app: Application) : AndroidViewModel(app) {
             db.graftingDao().deleteById(id)
         }
     }
+
+    // ✅ Метод массового удаления
+    fun deleteMultiple(ids: Collection<Long>) {
+        viewModelScope.launch {
+            ids.forEach { graftingId ->
+                val eventIds = db.eventDao().getIdsByGraftingId(graftingId)
+                eventIds.forEach { AlarmScheduler.cancelEvent(getApplication(), it) }
+                db.graftingDao().deleteById(graftingId)
+            }
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.beequeencalendar.ui.archive
 
 import android.os.Bundle
 import android.view.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
 import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.Fragment
@@ -18,12 +19,25 @@ class ArchiveFragment : Fragment(), GestureDetector.OnGestureListener {
     private val binding get() = _binding!!
     private val viewModel: ArchiveViewModel by viewModels()
 
-    // ✅ Детектор жестов
+    private lateinit var adapter: ArchiveAdapter
     private lateinit var gestureDetector: GestureDetectorCompat
     private val minSwipeDistance = 100
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    // ✅ Флаг: показывать ли кнопку удаления в ActionBar
+    private var showDeleteAction = false
+        set(value) {
+            field = value
+            // Перерисовываем меню
+            (activity as? AppCompatActivity)?.invalidateOptionsMenu()
+        }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentArchiveBinding.inflate(inflater, container, false)
+        setHasOptionsMenu(true) // ✅ Включаем работу с меню
         return binding.root
     }
 
@@ -39,7 +53,8 @@ class ArchiveFragment : Fragment(), GestureDetector.OnGestureListener {
             }
         })
 
-        val adapter = ArchiveAdapter(
+        // ✅ Инициализация адаптера с callback на изменение выделения
+        adapter = ArchiveAdapter(
             lifecycleOwner = viewLifecycleOwner,
             viewModel = viewModel,
             onClick = { graftId ->
@@ -55,8 +70,13 @@ class ArchiveFragment : Fragment(), GestureDetector.OnGestureListener {
                     .setPositiveButton("Удалить") { _, _ -> viewModel.delete(graftId) }
                     .setNegativeButton("Отмена", null)
                     .show()
+            },
+            onSelectionChange = { selectedIds ->
+                // ✅ Показываем/скрываем иконку корзины
+                showDeleteAction = selectedIds.isNotEmpty()
             }
         )
+
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
 
@@ -66,7 +86,78 @@ class ArchiveFragment : Fragment(), GestureDetector.OnGestureListener {
         }
     }
 
-    // ✅ Методы GestureDetector.OnGestureListener
+    // ✅ Создание меню (ActionBar)
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_archive, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    // ✅ Подготовка меню (показ/скрытие иконок)
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        // ✅ Иконка корзины — только если есть выделенные элементы
+        menu.findItem(R.id.action_delete_selected)?.apply {
+            isVisible = showDeleteAction
+            isEnabled = showDeleteAction
+        }
+        // ✅ Обычное меню — только если НЕ в режиме выбора
+        menu.findItem(R.id.action_select_all)?.isVisible = adapter.isSelectionMode
+        super.onPrepareOptionsMenu(menu)
+    }
+
+    // ✅ Обработка кликов по меню
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_delete_selected -> {
+                confirmAndDeleteSelected()
+                true
+            }
+            R.id.action_select_all -> {
+                adapter.selectAll()
+                true
+            }
+            android.R.id.home -> {
+                // ✅ Выход из режима выбора при нажатии "Назад"
+                if (adapter.isSelectionMode) {
+                    exitSelectionMode()
+                    true
+                } else {
+                    false
+                }
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    // ✅ Подтверждение и удаление выбранных
+    private fun confirmAndDeleteSelected() {
+        val ids = adapter.getSelectedIds()
+        if (ids.isEmpty()) return
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Удалить ${ids.size} записей?")
+            .setMessage("Все выбранные прививки и связанные события будут безвозвратно удалены.")
+            .setPositiveButton("Удалить") { _, _ ->
+                viewModel.deleteMultiple(ids)
+                exitSelectionMode()
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                // Ничего не делаем
+            }
+            .setOnDismissListener {
+                // Если диалог закрыли без выбора — остаёмся в режиме выбора
+            }
+            .show()
+    }
+
+    // ✅ Выход из режима выбора
+    private fun exitSelectionMode() {
+        adapter.isSelectionMode = false
+        showDeleteAction = false
+        // Скрываем ActionBar если нужно (опционально)
+        (activity as? AppCompatActivity)?.supportActionBar?.setDisplayHomeAsUpEnabled(false)
+    }
+
+    // ✅ Методы GestureDetector
     override fun onDown(e: MotionEvent) = true
     override fun onShowPress(e: MotionEvent) {}
     override fun onSingleTapUp(e: MotionEvent) = false
@@ -74,8 +165,7 @@ class ArchiveFragment : Fragment(), GestureDetector.OnGestureListener {
     override fun onLongPress(e: MotionEvent) {}
 
     override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-        if (e1 == null) return false
-
+        if (e1 == null || adapter.isSelectionMode) return false
         val diffX = e2.x - e1.x
         val diffY = e2.y - e1.y
 

@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+android:layout_width="match_parent"
+android:layout_height="match_parent">
+<LinearLayout
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -35,4 +38,40 @@
         android:text="@string/scheduled_alarms"
         app:icon="@android:drawable/ic_menu_agenda"
         style="@style/Widget.Material3.Button.OutlinedButton" />
+
+    <!-- ✅ Разделитель -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOutline"
+        android:alpha="0.3"
+        android:layout_marginVertical="24dp" />
+
+    <!-- ✅ Секция резервного копирования -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/backup_section"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnExportDatabase"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/export_database"
+        app:icon="@drawable/ic_upload" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnImportDatabase"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/import_database"
+        app:icon="@drawable/ic_download"
+        style="@style/Widget.Material3.Button.OutlinedButton" />
+
 </LinearLayout>
+</ScrollView>

@@ -26,4 +26,19 @@
     <string name="no_scheduled_alarms">Нет запланированных будильников</string>
     <string name="cancel_alarm">Отменить будильник</string>
     <string name="cancel_alarm_confirm">Вы уверены, что хотите отменить это уведомление?</string>
+
+    <!-- Резервное копирование -->
+    <string name="backup_section">Резервное копирование</string>
+    <string name="export_database">Экспорт базы</string>
+    <string name="import_database">Импорт базы</string>
+    <string name="import_warning_title">Импорт базы данных</string>
+    <string name="import_warning_message">Все текущие данные будут ЗАМЕНЕНЫ данными из файла.\n\nУбедитесь, что у вас есть актуальная резервная копия!</string>
+    <string name="export_success">База данных экспортирована</string>
+    <string name="import_success">Импорт выполнен. Требуется перезапуск.</string>
+    <string name="export_error">Ошибка экспорта</string>
+    <string name="import_error">Ошибка импорта</string>
+    <string name="version_too_new">Версия БД (%1$d) новее, чем поддерживает приложение (%2$d)</string>
+
+    <string name="select_all">Выбрать все</string>
+    <string name="delete_selected">Удалить выбранное</string>
 </resources>
