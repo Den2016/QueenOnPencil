@@ -19,8 +19,8 @@ class GraftEditViewModel(app: Application) : AndroidViewModel(app) {
     val grafting: LiveData<Grafting> = _grafting
 
     // ✅ ЗАМЕНИТЬ _saved на _saveResult
-    private val _saveResult = MutableLiveData<SaveResult>()
-    val saveResult: LiveData<SaveResult> = _saveResult
+    private val _saveResult = MutableLiveData<SaveResult?>()
+    val saveResult: LiveData<SaveResult> = _saveResult as LiveData<SaveResult>
 
     private val _preview = MutableLiveData<List<Pair<String, String>>>()
     val preview: LiveData<List<Pair<String, String>>> = _preview
