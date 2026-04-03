@@ -1,8 +1,8 @@
 package com.beequeencalendar.ui.settings
 
-import android.app.TimePickerDialog
-import android.os.Build
+
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
@@ -19,8 +19,7 @@ import kotlinx.coroutines.launch
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Spinner
-import android.widget.TimePicker
-import androidx.annotation.RequiresApi
+
 
 class ScheduleEditFragment : Fragment() {
     private var _binding: FragmentScheduleEditBinding? = null
@@ -39,9 +38,18 @@ class ScheduleEditFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         scheduleId = arguments?.getLong("scheduleId") ?: 0L
         rulesAdapter = RuleEditAdapter(
-            onRuleChanged = { rule, pos -> currentRules[pos] = rule },
-            onRuleDeleted = { rule -> currentRules.remove(rule); rulesAdapter.submitList(currentRules.toList()) }
+// ✅ СТАЛО:
+            onRuleChanged = { rule, pos ->
+                Log.d("DEBUG_FRAGMENT", "onRuleChanged pos=$pos, rule=$rule")
+                currentRules[pos] = rule  // ✅ Обновляем источник данных!
+                rulesAdapter.submitList(currentRules.toList())  // ✅ И уведомляем адаптер
+            },
+            onRuleDeleted = { rule ->
+                currentRules.remove(rule)
+                rulesAdapter.submitList(currentRules.toList())
+            }
         )
+
         binding.rvRules.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRules.adapter = rulesAdapter
 
@@ -130,15 +138,23 @@ class ScheduleEditFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext()).setTitle("Ошибка").setMessage("Введите название").setPositiveButton("OK", null).show()
             return
         }
-        viewModel.saveSchedule(
-            scheduleId,
-            name,
-            isDefaultSchedule,
-            binding.timePickerDefault.hour,
-            binding.timePickerDefault.minute,
-            currentRules
-        )
-        findNavController().popBackStack()
+        // ✅ Запускаем корутину и ЖДЁМ завершения сохранения
+        viewLifecycleOwner.lifecycleScope.launch {
+            Log.d("DEBUG_SAVE", "currentRules перед сохранением:")
+            currentRules.forEachIndexed { i, r ->
+                Log.d("DEBUG_SAVE", "  [$i] ${r.eventType} @ ${r.timeHour}:${r.timeMinute} ${r.advanceDays}")
+            }
+            viewModel.saveSchedule(
+                scheduleId,
+                name,
+                isDefaultSchedule,
+                binding.timePickerDefault.hour,
+                binding.timePickerDefault.minute,
+                currentRules
+            )
+            // ✅ Только после успешной записи в БД уходим с экрана
+            findNavController().popBackStack()
+        }
     }
 
     private fun confirmDelete() {

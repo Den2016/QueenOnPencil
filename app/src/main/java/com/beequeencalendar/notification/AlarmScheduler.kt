@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import com.beequeencalendar.data.AppDatabase
 import com.beequeencalendar.data.entity.Event
 import com.beequeencalendar.data.entity.NotificationRule
@@ -61,11 +62,15 @@ object AlarmScheduler {
         scheduleId: Long,
         events: List<Event>
     ) {
+        Log.d("ALARM_DEBUG", "🚀 scheduleEventsForGrafting: graftingId=$graftingId, scheduleId=$scheduleId, events=${events.size}")
         val db = AppDatabase.getInstance(context)
         val rules = db.notificationScheduleDao().getRulesByScheduleId(scheduleId)
+        Log.d("ALARM_DEBUG", "📋 Loaded ${rules.size} rules: ${rules.map { "${it.eventType}@${it.timeHour}:${it.timeMinute}" }}")
 
         // Получаем время по умолчанию для этого расписания
         val schedule = db.notificationScheduleDao().getById(scheduleId)
+        Log.d("ALARM_DEBUG", "⏰ Default time: ${schedule?.defaultHour ?: 8}:${schedule?.defaultMinute ?: 0}")
+
         val defaultHour = schedule?.defaultHour ?: 8
         val defaultMinute = schedule?.defaultMinute ?: 0
 

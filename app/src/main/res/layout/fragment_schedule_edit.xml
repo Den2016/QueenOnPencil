@@ -26,13 +26,16 @@
             android:textSize="14sp"
             android:textStyle="bold"
             android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
 
         <TimePicker
             android:id="@+id/timePickerDefault"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:timePickerMode="spinner" />
+            android:timePickerMode="spinner"
+            android:visibility="gone"
+            />
 
         <TextView
             android:layout_width="wrap_content"
@@ -63,7 +66,8 @@
             android:layout_height="wrap_content"
             android:text="➕ Добавить правило"
             style="@style/Widget.Material3.Button.OutlinedButton"
-            app:icon="@android:drawable/ic_input_add" />
+            app:icon="@android:drawable/ic_input_add"
+            android:visibility="gone"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDelete"

@@ -45,7 +45,7 @@ class ScheduleListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun saveSchedule(
+    suspend fun saveSchedule(
         scheduleId: Long,
         name: String,
         isDefault: Boolean,
@@ -53,19 +53,18 @@ class ScheduleListViewModel(app: Application) : AndroidViewModel(app) {
         defaultMinute: Int,
         rules: List<NotificationRule>
     ) {
-        viewModelScope.launch {
-            val finalId = if (scheduleId > 0) {
-                val existing = db.notificationScheduleDao().getById(scheduleId) ?: return@launch
-                db.notificationScheduleDao().update(
-                    existing.copy(name = name, isDefault = isDefault, defaultHour = defaultHour, defaultMinute = defaultMinute)
-                )
-                scheduleId
-            } else {
-                db.notificationScheduleDao().insert(
-                    NotificationSchedule(name = name, isDefault = isDefault, defaultHour = defaultHour, defaultMinute = defaultMinute)
-                )
-            }
-            db.notificationScheduleDao().saveRulesAtomic(finalId, rules)
+
+        val finalId = if (scheduleId > 0) {
+            val existing = db.notificationScheduleDao().getById(scheduleId) ?: return
+            db.notificationScheduleDao().update(
+                existing.copy(name = name, isDefault = isDefault, defaultHour = defaultHour, defaultMinute = defaultMinute)
+            )
+            scheduleId
+        } else {
+            db.notificationScheduleDao().insert(
+                NotificationSchedule(name = name, isDefault = isDefault, defaultHour = defaultHour, defaultMinute = defaultMinute)
+            )
         }
+        db.notificationScheduleDao().saveRulesAtomic(finalId, rules)
     }
 }

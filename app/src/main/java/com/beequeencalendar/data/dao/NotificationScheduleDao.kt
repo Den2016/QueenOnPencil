@@ -72,9 +72,13 @@ interface NotificationScheduleDao {
     }
     @Transaction
     suspend fun saveRulesAtomic(scheduleId: Long, rules: List<NotificationRule>) {
+        android.util.Log.d("DB_DEBUG", "🗑️ Deleting rules for schedule $scheduleId")
         deleteRulesByScheduleId(scheduleId)
-        rules.forEach { rule ->
+
+        rules.forEachIndexed { index, rule ->
+            android.util.Log.d("DB_DEBUG", "💾 Inserting rule $index: ${rule.eventType} @ ${rule.timeHour}:${rule.timeMinute} ${rule.advanceDays}")
             insertRule(rule.copy(id = 0L, scheduleId = scheduleId))
         }
+        android.util.Log.d("DB_DEBUG", "✅ Rules saved successfully")
     }
 }
