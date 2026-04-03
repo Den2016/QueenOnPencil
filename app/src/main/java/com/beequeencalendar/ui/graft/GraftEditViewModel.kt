@@ -49,58 +49,49 @@ class GraftEditViewModel(app: Application) : AndroidViewModel(app) {
         } catch (_: Exception) { }
     }
 
-//    fun save(tp: Int, dt: String, shift: Int, desc: String, existingId: Long) {
-//        viewModelScope.launch {
-//            val id: Long
-//            if (existingId > 0) {
-//                val updated = Grafting(id = existingId, tp = tp, dt = dt, shift = shift, desc = desc)
-//                graftingDao.update(updated)
-//                eventDao.deleteByGraftingId(existingId)
-//                id = existingId
-//            } else {
-//                id = graftingDao.insert(Grafting(tp = tp, dt = dt, shift = shift, desc = desc))
-//            }
-//            val events = BreedingCalendar.generateEvents(id, dt, shift, tp)
-//            eventDao.insertAll(events)
-//            val savedEvents = eventDao.getFutureEvents().filter { it.graftingId == id }
-//            AlarmScheduler.scheduleEvents(getApplication(), savedEvents)
-//            _saved.postValue(true)
-//        }
-//    }
-fun save(tp: Int, dt: String, shift: Int, desc: String, existingId: Long) {
-    viewModelScope.launch {
-        try {
-            val id: Long
-            if (existingId > 0) {
-                val updated = Grafting(id = existingId, tp = tp, dt = dt, shift = shift, desc = desc)
-                graftingDao.update(updated)
-                eventDao.deleteByGraftingId(existingId)
-                id = existingId
-            } else {
-                id = graftingDao.insert(Grafting(tp = tp, dt = dt, shift = shift, desc = desc))
+
+    fun save(tp: Int, dt: String, shift: Int, desc: String, existingId: Long, scheduleId: Long = 1L) {
+        viewModelScope.launch {
+            try {
+                val id: Long
+                if (existingId > 0) {
+                    val updated = Grafting(
+                        id = existingId,
+                        tp = tp,
+                        dt = dt,
+                        shift = shift,
+                        desc = desc,
+                        scheduleId = scheduleId
+                    )
+                    graftingDao.update(updated)
+                    eventDao.deleteByGraftingId(existingId)
+                    // ✅ Отменяем старые будильники
+                    AlarmScheduler.cancelEventsForGrafting(getApplication(), existingId)
+                    id = existingId
+                } else {
+                    id = graftingDao.insert(
+                        Grafting(tp = tp, dt = dt, shift = shift, desc = desc, scheduleId = scheduleId)
+                    )
+                }
+                val events = BreedingCalendar.generateEvents(id, dt, shift, tp)
+                eventDao.insertAll(events)
+                val savedEvents = eventDao.getFutureEvents().filter { it.graftingId == id }
+
+                // ✅ ПРОВЕРКА перед планированием будильников
+                if (!AlarmScheduler.canScheduleExactAlarms(getApplication())) {
+                    _saveResult.postValue(SaveResult.Warning(
+                        "⚠️ Будильники не установлены! Разрешите \"Точные будильники\" в настройках системы."
+                    ))
+                } else {
+                    // ✅ Используем новый метод с scheduleId
+                    AlarmScheduler.scheduleEventsForGrafting(getApplication(), id, scheduleId, savedEvents)
+                    _saveResult.postValue(SaveResult.Success)
+                }
+            } catch (e: Exception) {
+                _saveResult.postValue(SaveResult.Error)
             }
-
-            val events = BreedingCalendar.generateEvents(id, dt, shift, tp)
-            eventDao.insertAll(events)
-            val savedEvents = eventDao.getFutureEvents().filter { it.graftingId == id }
-
-            // ✅ ПРОВЕРКА перед планированием будильников
-            if (!AlarmScheduler.canScheduleExactAlarms(getApplication())) {
-                // ⚠️ Будильники не будут работать — сообщаем пользователю
-                _saveResult.postValue(SaveResult.Warning(
-                    "⚠️ Будильники не установлены! Разрешите \"Точные будильники\" в настройках системы, чтобы получать уведомления."
-                ))
-            } else {
-                AlarmScheduler.scheduleEvents(getApplication(), savedEvents)
-                _saveResult.postValue(SaveResult.Success)
-            }
-
-        } catch (e: Exception) {
-            _saveResult.postValue(SaveResult.Error)
         }
     }
-}
-
     // ✅ Добавить метод для сброса результата (после обработки)
     fun resetSaveResult() {
         _saveResult.value = null

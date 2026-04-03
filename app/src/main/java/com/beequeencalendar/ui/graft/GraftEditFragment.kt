@@ -7,13 +7,17 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.beequeencalendar.R
+import com.beequeencalendar.data.AppDatabase
 import com.beequeencalendar.data.BreedingCalendar
+import com.beequeencalendar.data.entity.NotificationSchedule
 import com.beequeencalendar.databinding.FragmentGraftEditBinding
 import com.beequeencalendar.notification.AlarmScheduler
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -25,32 +29,61 @@ class GraftEditFragment : Fragment() {
     private var graftId = 0L
     private var selectedDate = LocalDate.now()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    // ✅ Кэшируем список расписаний и дефолтный ID
+    private var scheduleList: List<NotificationSchedule> = emptyList()
+    private var defaultScheduleId: Long = 1L
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentGraftEditBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         graftId = arguments?.getLong("graftId") ?: 0L
-
-        // По умолчанию матка (tp = 0)
         var currentTp = 0
 
-        // Инициализация спиннера для матки
+        // ✅ 1. Загружаем дефолтный ID расписания (suspend вызов в корутине)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val db = AppDatabase.getInstance(requireContext())
+            defaultScheduleId = db.notificationScheduleDao().getDefault()?.id ?: 1L
+        }
+
+        // ✅ 2. Spinner расписаний — наблюдаем за LiveData напрямую (НЕ в launch!)
+        val scheduleDao = AppDatabase.getInstance(requireContext()).notificationScheduleDao()
+        scheduleDao.getAllActive().observe(viewLifecycleOwner) { schedules ->
+            scheduleList = schedules  // ✅ Сохраняем список для доступа по ID
+            val adapter = ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_spinner_dropdown_item,
+                schedules.map { it.name }
+            )
+            binding.spinnerSchedule.adapter = adapter
+
+            // ✅ 3. Устанавливаем выбранное расписание из grafting
+            viewModel.grafting.observe(viewLifecycleOwner) { g ->
+                val currentScheduleId = g.scheduleId.takeIf { it > 0 } ?: defaultScheduleId
+                val scheduleIndex = schedules.indexOfFirst { it.id == currentScheduleId }
+                if (scheduleIndex >= 0 && scheduleIndex < adapter.count) {
+                    binding.spinnerSchedule.setSelection(scheduleIndex)
+                }
+            }
+        }
+
+        // Инициализация спиннера типа прививки
         updateSpinnerAdapter(tp = 0)
         binding.spinnerType.setSelection(0)
 
-        // Обновляем превью при переключении пола
+        // Переключение пола (матка/трутень)
         binding.radioGroup.setOnCheckedChangeListener { _, checkedId ->
-            currentTp = if (checkedId == R.id.radioButton2) 1 else 0  // трутень = 1, матка = 0
+            currentTp = if (checkedId == R.id.radioButton2) 1 else 0
             updateSpinnerAdapter(tp = currentTp)
-            binding.spinnerType.setSelection(0)  // сброс на первый элемент
+            binding.spinnerType.setSelection(0)
             refreshPreview()
         }
-
-//        binding.spinnerType.adapter = ArrayAdapter(
-//            requireContext(), android.R.layout.simple_spinner_dropdown_item, BreedingCalendar.GRAFT_TYPES
-//        )
 
         binding.spinnerType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) {
@@ -59,31 +92,49 @@ class GraftEditFragment : Fragment() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-
+        // Превью событий
         val previewAdapter = EventPreviewAdapter()
         binding.rvPreview.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPreview.adapter = previewAdapter
 
+        // Выбор даты
         binding.btnDate.setOnClickListener {
-            DatePickerDialog(requireContext(), { _, y, m, d ->
-                selectedDate = LocalDate.of(y, m + 1, d)
-                updateDateDisplay()
-                refreshPreview()
-            }, selectedDate.year, selectedDate.monthValue - 1, selectedDate.dayOfMonth).show()
+            DatePickerDialog(
+                requireContext(),
+                { _, y, m, d ->
+                    selectedDate = LocalDate.of(y, m + 1, d)
+                    updateDateDisplay()
+                    refreshPreview()
+                },
+                selectedDate.year,
+                selectedDate.monthValue - 1,
+                selectedDate.dayOfMonth
+            ).show()
         }
 
+        // ✅ 4. Кнопка сохранения (ОДИН раз!)
         binding.btnSave.setOnClickListener {
             val shift = binding.spinnerType.selectedItemPosition
             val dt = selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
             val tp = when (binding.radioGroup.checkedRadioButtonId) {
-                R.id.radioButton -> 0      // матка
-                R.id.radioButton2 -> 1     // трутень
-                else -> 0                  // по умолчанию матка
+                R.id.radioButton -> 0
+                R.id.radioButton2 -> 1
+                else -> 0
             }
             val desc = binding.etDesc.text.toString()
-            viewModel.save(tp, dt, shift, desc, graftId)
+
+            // ✅ Получаем ID выбранного расписания из спиннера
+            val selectedPos = binding.spinnerSchedule.selectedItemPosition
+            val scheduleId = if (selectedPos >= 0 && selectedPos < scheduleList.size) {
+                scheduleList[selectedPos].id
+            } else {
+                defaultScheduleId
+            }
+
+            viewModel.save(tp, dt, shift, desc, graftId, scheduleId)
         }
 
+        // Загрузка данных прививки
         viewModel.grafting.observe(viewLifecycleOwner) { g ->
             selectedDate = try {
                 LocalDate.parse(g.dt, DateTimeFormatter.ISO_LOCAL_DATE)
@@ -91,39 +142,37 @@ class GraftEditFragment : Fragment() {
                 LocalDate.now()
             }
             updateDateDisplay()
-            // 👇 ДОБАВЬ ПРОВЕРКУ: если новая прививка и shift=0, бери из настроек
-            val typeToSet = if (graftId == 0L ) {
+
+            val typeToSet = if (graftId == 0L) {
                 AlarmScheduler.getDefaultGraftType(requireContext())
             } else {
                 g.shift
             }
-            if(graftId != 0L){
-                currentTp = g.tp
 
-                // Устанавливаем RadioGroup
+            if (graftId != 0L) {
+                currentTp = g.tp
                 binding.radioGroup.check(
                     if (currentTp == 1) R.id.radioButton2 else R.id.radioButton
                 )
-
-                // Обновляем адаптер спиннера
                 updateSpinnerAdapter(tp = currentTp)
             }
-
 
             binding.spinnerType.setSelection(typeToSet)
             binding.etDesc.setText(g.desc)
             refreshPreview()
         }
 
-        viewModel.preview.observe(viewLifecycleOwner) { previewAdapter.submitList(it) }
-// ✅ ЗАМЕНИТЬ наблюдение за viewModel.saved на viewModel.saveResult
+        viewModel.preview.observe(viewLifecycleOwner) {
+            previewAdapter.submitList(it)
+        }
+
+        // Обработка результата сохранения
         viewModel.saveResult.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is GraftEditViewModel.SaveResult.Success -> {
                     findNavController().popBackStack()
                 }
                 is GraftEditViewModel.SaveResult.Warning -> {
-                    // ⚠️ Показываем диалог с предупреждением
                     MaterialAlertDialogBuilder(requireContext())
                         .setTitle("Внимание")
                         .setMessage(result.message)
@@ -131,16 +180,12 @@ class GraftEditFragment : Fragment() {
                             findNavController().popBackStack()
                         }
                         .setNegativeButton("Настройки") { _, _ ->
-                            // 📲 Отправляем пользователя в настройки для выдачи разрешения
                             AlarmScheduler.requestExactAlarmPermission(requireContext())
                         }
-                        .setOnDismissListener {
-                            viewModel.resetSaveResult()
-                        }
+                        .setOnDismissListener { viewModel.resetSaveResult() }
                         .show()
                 }
                 is GraftEditViewModel.SaveResult.Error -> {
-                    // ❌ Ошибка сохранения
                     MaterialAlertDialogBuilder(requireContext())
                         .setTitle("Ошибка")
                         .setMessage("Не удалось сохранить прививку. Попробуйте ещё раз.")
@@ -153,20 +198,14 @@ class GraftEditFragment : Fragment() {
             }
         }
 
-// ✅ УДАЛИТЬ старое наблюдение:
-// viewModel.saved.observe(viewLifecycleOwner) { if (it) findNavController().popBackStack() }
-        //viewModel.saved.observe(viewLifecycleOwner) { if (it) findNavController().popBackStack() }
-
         viewModel.load(graftId)
-
     }
 
     private fun refreshPreview() {
-        // Определяем пол: 0 = матка, 1 = трутень
         val sex = when (binding.radioGroup.checkedRadioButtonId) {
-            R.id.radioButton -> 0      // матка
-            R.id.radioButton2 -> 1     // трутень
-            else -> 0                  // по умолчанию матка
+            R.id.radioButton -> 0
+            R.id.radioButton2 -> 1
+            else -> 0
         }
         viewModel.updatePreview(
             selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
@@ -186,19 +225,16 @@ class GraftEditFragment : Fragment() {
         _binding = null
     }
 
-    // Функция обновления адаптера спиннера
     private fun updateSpinnerAdapter(tp: Int) {
         val types = if (tp == 1) {
-            BreedingCalendar.DRON_TYPES  // трутень
+            BreedingCalendar.DRON_TYPES
         } else {
-            BreedingCalendar.GRAFT_TYPES  // матка
+            BreedingCalendar.GRAFT_TYPES
         }
-
         binding.spinnerType.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
             types
         )
     }
-
 }

@@ -47,45 +47,39 @@ class SettingsFragment : Fragment() {
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val timePicker = view.findViewById<TimePicker>(R.id.timePicker)
-        timePicker.setIs24HourView(true)
-        timePicker.hour = AlarmScheduler.getHour(requireContext())
-        timePicker.minute = AlarmScheduler.getMinute(requireContext())
-
+//        val timePicker = view.findViewById<TimePicker>(R.id.timePicker)
+//        timePicker.setIs24HourView(true)
+//        timePicker.hour = AlarmScheduler.getHour(requireContext())
+//        timePicker.minute = AlarmScheduler.getMinute(requireContext())
+//
+//
 //        timePicker.setOnTimeChangedListener { _, hour, minute ->
 //            AlarmScheduler.saveTime(requireContext(), hour, minute)
-//            CoroutineScope(Dispatchers.Main).launch {
-//                AlarmScheduler.rescheduleAll(requireContext())
+//
+//            // ✅ ПРОВЕРКА перед пересозданием будильников
+//            if (!AlarmScheduler.canScheduleExactAlarms(requireContext())) {
+//                // ⚠️ Показываем диалог
+//                showNoPermissionDialog()
+//            } else {
+//
+//
+//                CoroutineScope(Dispatchers.Main).launch {
+//                    // ✅ Перед пересозданием проверяем права
+//                    if (AlarmScheduler.canScheduleExactAlarms(requireContext())) {
+//                        AlarmScheduler.rescheduleAll(requireContext())
+//                    } else {
+//                        // Показать предупреждение что будильники не сработают
+//                        MaterialAlertDialogBuilder(requireContext())
+//                            .setTitle("Нет разрешения")
+//                            .setMessage("Разрешите установку точных будильников в настройках системы")
+//                            .setPositiveButton("Настройки") { _, _ ->
+//                                AlarmScheduler.requestExactAlarmPermission(requireContext())
+//                            }
+//                            .show()
+//                    }
+//                }
 //            }
 //        }
-
-        timePicker.setOnTimeChangedListener { _, hour, minute ->
-            AlarmScheduler.saveTime(requireContext(), hour, minute)
-
-            // ✅ ПРОВЕРКА перед пересозданием будильников
-            if (!AlarmScheduler.canScheduleExactAlarms(requireContext())) {
-                // ⚠️ Показываем диалог
-                showNoPermissionDialog()
-            } else {
-
-
-                CoroutineScope(Dispatchers.Main).launch {
-                    // ✅ Перед пересозданием проверяем права
-                    if (AlarmScheduler.canScheduleExactAlarms(requireContext())) {
-                        AlarmScheduler.rescheduleAll(requireContext())
-                    } else {
-                        // Показать предупреждение что будильники не сработают
-                        MaterialAlertDialogBuilder(requireContext())
-                            .setTitle("Нет разрешения")
-                            .setMessage("Разрешите установку точных будильников в настройках системы")
-                            .setPositiveButton("Настройки") { _, _ ->
-                                AlarmScheduler.requestExactAlarmPermission(requireContext())
-                            }
-                            .show()
-                    }
-                }
-            }
-        }
 
         // Добавь Spinner для выбора типа прививки по умолчанию
         val spinnerGraftType = view.findViewById<Spinner>(R.id.spinnerDefaultGraftType)
@@ -116,6 +110,50 @@ class SettingsFragment : Fragment() {
             )
         }
 
+// ✅ Кнопка пересоздания всех будильников
+        val btnRescheduleAll = view.findViewById<com.google.android.material.button.MaterialButton>(
+            R.id.btnRescheduleAll
+        )
+        btnRescheduleAll.setOnClickListener {
+            if (!AlarmScheduler.canScheduleExactAlarms(requireContext())) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("⚠️ Нет разрешения")
+                    .setMessage("Разрешите установку точных будильников в настройках системы")
+                    .setPositiveButton("Настройки") { _, _ ->
+                        AlarmScheduler.requestExactAlarmPermission(requireContext())
+                    }
+                    .setNegativeButton("Отмена", null)
+                    .show()
+            } else {
+                // Проверка на Android 12+ с ограничением
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Пересоздать будильники?")
+                        .setMessage("На Android 12+ действует ограничение до 15 ближайших будильников. Старые будут отменены.")
+                        .setPositiveButton("Пересоздать") { _, _ ->
+                            rescheduleAlarms()
+                        }
+                        .setNegativeButton("Отмена", null)
+                        .show()
+                } else {
+                    // Android 7-11: без ограничений
+                    rescheduleAlarms()
+                }
+            }
+        }
+
+
+
+// Кнопка управления расписаниями
+        val btnSchedules = view.findViewById<com.google.android.material.button.MaterialButton>(
+            R.id.btnNotificationSchedules
+        )
+        btnSchedules.setOnClickListener {
+            findNavController().navigate(
+                com.beequeencalendar.R.id.action_settingsFragment_to_scheduleListFragment
+            )
+        }
+
         // ✅ Кнопка экспорта
         val btnExport = view.findViewById<com.google.android.material.button.MaterialButton>(
             R.id.btnExportDatabase
@@ -131,8 +169,28 @@ class SettingsFragment : Fragment() {
         btnImport.setOnClickListener {
             showImportWarningDialog()
         }
-    }
 
+
+    }
+    // Метод для пересоздания
+    private fun rescheduleAlarms() {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                AlarmScheduler.rescheduleAll(requireContext())
+                Snackbar.make(
+                    requireView(),
+                    "✅ Будильники пересозданы",
+                    Snackbar.LENGTH_LONG
+                ).show()
+            } catch (e: Exception) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Ошибка")
+                    .setMessage("Не удалось пересоздать будильники: ${e.message}")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
+    }
     // ✅ Выполнение экспорта
     private fun performExport(uri: android.net.Uri) {
         CoroutineScope(Dispatchers.Main).launch {

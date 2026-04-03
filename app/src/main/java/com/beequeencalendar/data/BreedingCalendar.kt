@@ -120,4 +120,10 @@ object BreedingCalendar {
     private fun dronOffset(shift: Int): Int =
         DRONE_OFFSETS.getOrElse(shift) { 0 }
 
+    // В конец BreedingCalendar.kt добавьте:
+// ✅ Метод для получения всех типов событий (для правил)
+    fun getAllEventTypes(): List<String> {
+        return (EVENTS.map { it.second } + DRON_EVENTS.map { it.second }).distinct()
+    }
+
 }

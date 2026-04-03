@@ -41,4 +41,35 @@
 
     <string name="select_all">Выбрать все</string>
     <string name="delete_selected">Удалить выбранное</string>
+
+
+    <!-- ========================================== -->
+    <!-- ✅ РАЗДЕЛ: Расписания уведомлений -->
+    <!-- ========================================== -->
+    <string name="notification_schedule">Расписание уведомлений</string>
+    <string name="notification_schedules">Расписания уведомлений</string>
+    <string name="edit_schedule">Редактирование расписания</string>
+    <string name="new_schedule">Новое расписание</string>
+    <string name="no_schedules">Нет созданных расписаний</string>
+    <string name="schedule_name">Название расписания</string>
+    <string name="set_as_default">Сделать по умолчанию</string>
+    <string name="delete_schedule">Удалить расписание</string>
+    <string name="delete_schedule_confirm">Вы уверены? Это действие нельзя отменить.</string>
+    <string name="notification_rules">Правила уведомлений</string>
+    <string name="event_type">Тип события</string>
+    <string name="notification_time">Время уведомления</string>
+    <string name="advance_notification_days">Дни предварительного уведомления</string>
+    <string name="repeat_notifications">Повторы уведомлений</string>
+    <string name="repeat_count">Количество повторов</string>
+    <string name="repeat_interval">Интервал повтора (мин)</string>
+    <string name="enabled">Включено</string>
+    <string name="save_schedule">Сохранить расписание</string>
+
+    <string name="advance_1_day">За 1 день</string>
+    <string name="advance_2_days">За 2 дня</string>
+    <string name="advance_3_days">За 3 дня</string>
+
+    <string name="discard_changes">Отменить изменения</string>
+    <string name="unsaved_changes_warning">Несохранённые изменения будут потеряны</string>
+
 </resources>

@@ -63,5 +63,34 @@
         <action
             android:id="@+id/action_settingsFragment_to_scheduledAlarmsFragment"
             app:destination="@id/scheduledAlarmsFragment" />
+        <!-- ✅ ДОБАВИТЬ это действие -->
+        <action
+            android:id="@+id/action_settingsFragment_to_scheduleListFragment"
+            app:destination="@id/scheduleListFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/scheduleListFragment"
+        android:name="com.beequeencalendar.ui.settings.ScheduleListFragment"
+        android:label="@string/notification_schedule">
+        <action
+            android:id="@+id/action_scheduleList_to_scheduleEdit"
+            app:destination="@id/scheduleEditFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/scheduleEditFragment"
+        android:name="com.beequeencalendar.ui.settings.ScheduleEditFragment"
+        android:label="@string/edit_schedule">
+        <argument
+            android:name="scheduleId"
+            app:argType="long"
+            android:defaultValue="0L" />
+        <!-- ✅ Action для возврата -->
+        <action
+            android:id="@+id/action_scheduleEdit_to_scheduleList"
+            app:popUpTo="@id/scheduleListFragment"
+            app:popUpToInclusive="false" />
     </fragment>
 </navigation>
